@@ -1,0 +1,5 @@
+# requirements.txt
+
+# 核心 ASR 模型与推理库
+torch>=1.13.0
+whisper
