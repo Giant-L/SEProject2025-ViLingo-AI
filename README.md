@@ -60,7 +60,15 @@ brew install ffmpeg git
 
 
 
-* WIndows
+* Windows
 
 1. 下载并解压FFmpeg静态包（https://www.gyan.dev/ffmpeg/builds/）
 2. 解压后的bin目录添加到系统的环境变量PATH中。
+
+
+
+##  其他细节
+
+在配置好环境的时候，whisper第一次加载small模型时会自动从网上拉取预训练权重的进度条；461MB就是模型文件的大小。
+
+whisper会把权重缓存在`~/.cache/whisper/`（或类似目录）下，之后再跑就不再下载了
