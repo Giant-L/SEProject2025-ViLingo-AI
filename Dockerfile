@@ -24,6 +24,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 将我们的核心应用代码复制到镜像中
 COPY ./src /app/src
 
+#  在构建时预热并下载所有模型 ---
+#
+#  此命令会执行模型加载脚本，这将触发所有AI模型的下载。
+#  模型文件会被保存在上面ENV设置的缓存目录中，并成为Docker镜像的一部分。
+#  这一步会显著增加构建时间和最终镜像的大小，但这是我们所期望的。
+#
+RUN python -c "from src.vilingo.core import models; print('开始预下载所有模型...'); models.load_all_models(); print('所有模型已成功下载并缓存。')"
+
+
 # 暴露端口，让外部可以访问FastAPI服务
 EXPOSE 8000
 
