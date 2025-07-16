@@ -6,9 +6,9 @@ WORKDIR /app
 
 # 安装系统依赖，ffmpeg用于处理音视频
 # apt-get clean && rm -rf /var/lib/apt/lists/* 用于减小镜像体积
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     ffmpeg \
+#     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 复制生产依赖列表文件
 COPY requirements.txt requirements.txt

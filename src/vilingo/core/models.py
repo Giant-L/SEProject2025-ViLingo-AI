@@ -26,7 +26,7 @@ def get_device():
 # --- 3. 定义所有模型名称和配置 ---
 DEVICE = get_device()
 WHISPER_MODEL = "small"
-SUMMARIZER_MODEL = "Qwen/Qwen2-7B-Instruct"
+SUMMARIZER_MODEL = "microsoft/Phi-3-mini-4k-instruct"
 SIMILARITY_MODEL = 'all-MiniLM-L6-v2'
 # Docker镜像内的缓存目录，如果本地运行，则会下载到用户主目录的.cache下
 CACHE_DIR = os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache"))
