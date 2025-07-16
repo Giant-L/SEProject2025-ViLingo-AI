@@ -11,14 +11,34 @@ from peft import get_peft_model, LoraConfig, TaskType
 from dataclasses import dataclass
 from typing import Any, Dict, List, Union
 
+# ====================================================================================
+# 💡 核心修改：动态路径管理
+# 无论从哪里运行此脚本，都能确保路径正确
+# ====================================================================================
+# 1. 获取此脚本文件所在的绝对路径
+script_path = os.path.abspath(__file__)
+# 2. 从脚本路径推断出项目根目录 (finetune_dataset 目录的上级)
+project_root = os.path.dirname(os.path.dirname(script_path))
+print(f"✅ 项目根目录已自动设置为: {project_root}")
+
+# 3. 基于项目根目录定义所有其他路径
+data_file = os.path.join(project_root, "finetune_dataset", "train.jsonl")
+cache_dir = os.path.join(project_root, ".cache") # 建议将cache放在根目录
+output_dir = os.path.join(project_root, "finetune_dataset", "output")
+save_dir = os.path.join(project_root, "finetune_dataset", "finetuned-whisper-lora")
+# ====================================================================================
+
+
 # Step 1: 加载 Whisper 模型和处理器
 model_name = "openai/whisper-small"
 processor = WhisperProcessor.from_pretrained(model_name)
 model = WhisperForConditionalGeneration.from_pretrained(model_name)
 
-# Step 2: 加载数据集
-dataset = load_dataset("json", data_files="finetune_dataset/train.jsonl", split="train", cache_dir="./.cache")
+# Step 2: 加载数据集 (使用我们定义的动态路径)
+print(f"⏳ 正在从 '{data_file}' 加载数据集...")
+dataset = load_dataset("json", data_files=data_file, split="train", cache_dir=cache_dir)
 dataset = dataset.cast_column("audio", Audio(sampling_rate=16000))
+print("✅ 数据集加载完成")
 
 # Step 3: 添加 LoRA adapter
 lora_config = LoraConfig(
@@ -34,6 +54,8 @@ model.print_trainable_parameters()
 
 # Step 4: 数据预处理函数
 def prepare_dataset(batch):
+    # 注意：这里的 audio 路径是相对 'data_file' 的，datasets 库会自动处理
+    # 我们不需要在这里修改它
     audio = batch["audio"]
     batch["input_features"] = processor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
     batch["labels"] = processor.tokenizer(batch["text"]).input_ids
@@ -61,30 +83,18 @@ class DataCollatorSpeechSeq2SeqWithPadding:
 data_collator = DataCollatorSpeechSeq2SeqWithPadding(processor=processor)
 
 
-# ✅✅✅ Step 8: 最终解决方案 -> 创建自定义 Trainer ✅✅✅
+# Step 8: 自定义 Trainer (保持不变)
 class CustomSeq2SeqTrainer(Seq2SeqTrainer):
     def compute_loss(self, model, inputs, return_outputs=False):
-        """
-        重写 compute_loss 函数。
-        这是 Trainer 将数据传递给模型前的最后一步。
-        我们在这里拦截 'inputs' 字典并进行修正。
-        """
-        # 🕵️‍♂️ 最终诊断: 检查进入 compute_loss 的 inputs
-        print("[DIAGNOSTIC] Inside custom compute_loss. Keys in 'inputs':", list(inputs.keys()))
-
-        # 如果 'input_ids' 意外地出现在这里，就强制删除它
         if 'input_ids' in inputs:
-            print("!!! WARNING: 'input_ids' found in inputs dict inside compute_loss. Forcibly removing it. !!!")
             del inputs['input_ids']
-
-        # 调用原始的 compute_loss 函数来完成实际的计算
         return super().compute_loss(model, inputs, return_outputs)
 
-# Step 9: 定义训练参数
+# Step 9: 定义训练参数 (使用我们定义的动态路径)
 use_fp16 = torch.cuda.is_available()
 
 training_args = Seq2SeqTrainingArguments(
-    output_dir="./finetune_dataset/output",
+    output_dir=output_dir,
     per_device_train_batch_size=2,
     gradient_accumulation_steps=4,
     learning_rate=1e-4,
@@ -99,7 +109,7 @@ training_args = Seq2SeqTrainingArguments(
 )
 
 # Step 10: 创建我们自定义的 Trainer 实例
-trainer = CustomSeq2SeqTrainer( # <-- 使用我们的自定义 Trainer
+trainer = CustomSeq2SeqTrainer(
     model=model,
     args=training_args,
     train_dataset=processed_dataset,
@@ -107,10 +117,11 @@ trainer = CustomSeq2SeqTrainer( # <-- 使用我们的自定义 Trainer
     tokenizer=processor.feature_extractor,
 )
 
-print("\n--- Starting Training with Custom Trainer ---")
+print("\n--- 开始训练 ---")
 trainer.train()
 
-# Step 11: 保存模型
-print("\n--- Training Finished Successfully! Saving model... ---")
-model.save_pretrained("./finetune_dataset/finetuned-whisper-lora")
-processor.save_pretrained("./finetune_dataset/finetuned-whisper-lora")
+# Step 11: 保存模型 (使用我们定义的动态路径)
+print(f"\n✅ 训练完成! 模型将保存到: {save_dir}")
+model.save_pretrained(save_dir)
+processor.save_pretrained(save_dir)
+print("🎉 模型和处理器已成功保存!")
