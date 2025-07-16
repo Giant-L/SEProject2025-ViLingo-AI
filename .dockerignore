@@ -1,0 +1,20 @@
+# Git files
+.git/
+.gitignore
+.dockerignore
+
+# Non-essential directories for production
+tests/
+scripts/
+finetune/
+assets/
+data/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE and local configs
+.idea/
+.vscode/
+.env

@@ -1,0 +1,32 @@
+# requirements-dev.txt
+#
+# 开发与模型微调环境依赖
+# 使用 'pip install -r requirements-dev.txt' 安装
+# ----------------------------------------------------
+
+# 首先，安装所有生产环境的依赖
+-r requirements.txt
+
+# --- 模型微调 (Fine-tuning) ---
+# PEFT: LoRA等高效微调方法库
+peft==0.10.0
+
+# Hugging Face 数据集处理库
+datasets==2.18.0
+
+# --- 音频处理 ---
+torchaudio==2.2.2
+soundfile==0.12.1
+librosa==0.10.1
+
+# --- 科学计算与辅助 ---
+numpy==1.26.4
+scipy==1.12.0
+jsonlines==4.0.0 # 用于处理 .jsonl 数据文件
+tqdm              # 优雅的进度条
+
+# --- 开发与测试工具 ---
+pytest            # 测试框架
+requests          # 用于向API发送测试请求
+black             # Python 代码格式化工具
+ruff              # 高性能的Python Linter

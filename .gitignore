@@ -1,22 +1,81 @@
-# macOS Finder 文件
+# =============================================================================
+#  此文件由 https://www.toptal.com/developers/gitignore/api/python,macos,node,visualstudiocode 生成和修改
+# =============================================================================
+
+# 操作系统和IDE特定文件
+# =============================================================================
+# macOS
 .DS_Store
-
-
-.AppleDouble/
+.AppleDouble
 .LSOverride
 
-# Node/npm 等常见忽略（可按需保留或删除）
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains (PyCharm, etc.)
+.idea/
+
+# =============================================================================
+#  Python 依赖与缓存
+# =============================================================================
+# 虚拟环境
+.env
+.venv
+venv/
+env/
+
+# Python 缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C 扩展
+*.so
+
+# 包管理与分发
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 测试与覆盖率报告
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# =============================================================================
+#  项目特定忽略项
+# =============================================================================
+# 数据、模型和日志文件 (这些不应提交到Git)
+/data/
+/finetune/audio_data/
+*.arrow
+*.db
+*.sqlite3
+*.log
+*.log.*
+
+# 本地模型缓存 (避免将本地下载的模型提交)
+/hf_cache/
+/torch_cache/
+/whisper_cache/
+/.cache/
+
+# 临时文件
+temp_*/
+
+# =============================================================================
+#  其他 (可选，根据您的技术栈)
+# =============================================================================
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# 忽略数据集缓存文件
-finetune_dataset/.cache/# ignore HuggingFace cache
-finetune_dataset/.cache/
-# HuggingFace & 自建缓存
-finetune_dataset/.cache/
-# 一切 .arrow 大文件
-*.arrow
-.cache/
-finetune_dataset/audio/
