@@ -18,3 +18,5 @@ finetune_dataset/.cache/
 finetune_dataset/.cache/
 # 一切 .arrow 大文件
 *.arrow
+.cache/
+finetune_dataset/audio/
