@@ -1,0 +1,120 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0.0
+xmax = 1.819591836734694
+tiers? <exists>
+size = 2
+item []:
+	item [1]:
+		class = "IntervalTier"
+		name = "words"
+		xmin = 0.0
+		xmax = 1.819591836734694
+		intervals: size = 8
+			intervals [1]:
+				xmin = 0.0
+				xmax = 0.030
+				text = ""
+			intervals [2]:
+				xmin = 0.030
+				xmax = 0.200
+				text = "he"
+			intervals [3]:
+				xmin = 0.200
+				xmax = 0.470
+				text = "had"
+			intervals [4]:
+				xmin = 0.470
+				xmax = 0.500
+				text = ""
+			intervals [5]:
+				xmin = 0.500
+				xmax = 0.720
+				text = "been"
+			intervals [6]:
+				xmin = 0.720
+				xmax = 1.060
+				text = "so"
+			intervals [7]:
+				xmin = 1.060
+				xmax = 1.700
+				text = "easy"
+			intervals [8]:
+				xmin = 1.700
+				xmax = 1.819591836734694
+				text = ""
+	item [2]:
+		class = "IntervalTier"
+		name = "phones"
+		xmin = 0.0
+		xmax = 1.819591836734694
+		intervals: size = 17
+			intervals [1]:
+				xmin = 0.000
+				xmax = 0.030
+				text = "sil"
+			intervals [2]:
+				xmin = 0.030
+				xmax = 0.170
+				text = "HH"
+			intervals [3]:
+				xmin = 0.170
+				xmax = 0.200
+				text = "IY1"
+			intervals [4]:
+				xmin = 0.200
+				xmax = 0.280
+				text = "HH"
+			intervals [5]:
+				xmin = 0.280
+				xmax = 0.390
+				text = "AE1"
+			intervals [6]:
+				xmin = 0.390
+				xmax = 0.470
+				text = "D"
+			intervals [7]:
+				xmin = 0.470
+				xmax = 0.500
+				text = "sp"
+			intervals [8]:
+				xmin = 0.500
+				xmax = 0.570
+				text = "B"
+			intervals [9]:
+				xmin = 0.570
+				xmax = 0.660
+				text = "IH1"
+			intervals [10]:
+				xmin = 0.660
+				xmax = 0.720
+				text = "N"
+			intervals [11]:
+				xmin = 0.720
+				xmax = 0.880
+				text = "S"
+			intervals [12]:
+				xmin = 0.880
+				xmax = 1.060
+				text = "OW1"
+			intervals [13]:
+				xmin = 1.060
+				xmax = 1.240
+				text = "IY1"
+			intervals [14]:
+				xmin = 1.240
+				xmax = 1.380
+				text = "Z"
+			intervals [15]:
+				xmin = 1.380
+				xmax = 1.700
+				text = "IY0"
+			intervals [16]:
+				xmin = 1.700
+				xmax = 1.800
+				text = "sp"
+			intervals [17]:
+				xmin = 1.800
+				xmax = 1.819591836734694
+				text = ""

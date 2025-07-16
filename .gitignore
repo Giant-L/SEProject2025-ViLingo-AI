@@ -10,3 +10,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# 忽略数据集缓存文件
+finetune_dataset/.cache/# ignore HuggingFace cache
+finetune_dataset/.cache/

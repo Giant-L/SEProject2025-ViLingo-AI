@@ -1,0 +1,128 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0.0
+xmax = 1.78
+tiers? <exists>
+size = 2
+item []:
+	item [1]:
+		class = "IntervalTier"
+		name = "words"
+		xmin = 0.0
+		xmax = 1.78
+		intervals: size = 7
+			intervals [1]:
+				xmin = 0.000
+				xmax = 0.130
+				text = "he"
+			intervals [2]:
+				xmin = 0.130
+				xmax = 0.460
+				text = "was"
+			intervals [3]:
+				xmin = 0.460
+				xmax = 0.980
+				text = "wounded"
+			intervals [4]:
+				xmin = 0.980
+				xmax = 1.130
+				text = "in"
+			intervals [5]:
+				xmin = 1.130
+				xmax = 1.290
+				text = "the"
+			intervals [6]:
+				xmin = 1.290
+				xmax = 1.670
+				text = "arm"
+			intervals [7]:
+				xmin = 1.670
+				xmax = 1.78
+				text = ""
+	item [2]:
+		class = "IntervalTier"
+		name = "phones"
+		xmin = 0.0
+		xmax = 1.78
+		intervals: size = 20
+			intervals [1]:
+				xmin = 0.000
+				xmax = 0.080
+				text = "HH"
+			intervals [2]:
+				xmin = 0.080
+				xmax = 0.130
+				text = "IY1"
+			intervals [3]:
+				xmin = 0.130
+				xmax = 0.230
+				text = "W"
+			intervals [4]:
+				xmin = 0.230
+				xmax = 0.340
+				text = "AH1"
+			intervals [5]:
+				xmin = 0.340
+				xmax = 0.460
+				text = "Z"
+			intervals [6]:
+				xmin = 0.460
+				xmax = 0.620
+				text = "W"
+			intervals [7]:
+				xmin = 0.620
+				xmax = 0.690
+				text = "UW1"
+			intervals [8]:
+				xmin = 0.690
+				xmax = 0.760
+				text = "N"
+			intervals [9]:
+				xmin = 0.760
+				xmax = 0.820
+				text = "D"
+			intervals [10]:
+				xmin = 0.820
+				xmax = 0.950
+				text = "IH0"
+			intervals [11]:
+				xmin = 0.950
+				xmax = 0.980
+				text = "D"
+			intervals [12]:
+				xmin = 0.980
+				xmax = 1.080
+				text = "IH1"
+			intervals [13]:
+				xmin = 1.080
+				xmax = 1.130
+				text = "N"
+			intervals [14]:
+				xmin = 1.130
+				xmax = 1.180
+				text = "DH"
+			intervals [15]:
+				xmin = 1.180
+				xmax = 1.290
+				text = "IY0"
+			intervals [16]:
+				xmin = 1.290
+				xmax = 1.480
+				text = "AA1"
+			intervals [17]:
+				xmin = 1.480
+				xmax = 1.530
+				text = "R"
+			intervals [18]:
+				xmin = 1.530
+				xmax = 1.670
+				text = "M"
+			intervals [19]:
+				xmin = 1.670
+				xmax = 1.760
+				text = "sp"
+			intervals [20]:
+				xmin = 1.760
+				xmax = 1.78
+				text = ""
