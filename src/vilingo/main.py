@@ -56,13 +56,13 @@ def read_root():
 @app.post("/api/v1/analyze", response_model=JobResponse, status_code=status.HTTP_202_ACCEPTED, tags=["Analysis"])
 async def start_analysis(
     background_tasks: BackgroundTasks,
-    # --- 主要变更在这里 ---
-    srt_file: UploadFile = File(..., description="用户上传的字幕文件 (.srt)"),
-    # ----------------------
+    # --- 主要变更在这里：从 srt_file 变为 summary_txt_file ---
+    summary_txt_file: UploadFile = File(..., description="包含英文内容摘要的文本文件 (.txt)"),
+    # ----------------------------------------------------
     user_audio: UploadFile = File(..., description="用户的录音文件")
 ):
     """
-    接收字幕和音频文件，启动一个后台分析任务，并立即返回任务ID。
+    接收摘要文本和音频文件，启动一个后台分析任务。
     """
     job_id = str(uuid.uuid4())
     temp_dir = f"temp_{job_id}"
@@ -70,11 +70,11 @@ async def start_analysis(
     
     try:
         # --- 变更文件保存逻辑 ---
-        srt_path = os.path.join(temp_dir, "source_subtitle.srt")
-        user_audio_path = os.path.join(temp_dir, "user_audio.wav")
+        summary_path = os.path.join(temp_dir, "summary.txt")
+        user_audio_path = os.path.join(temp_dir, "user_audio.mp3") # 明确文件类型
 
-        with open(srt_path, "wb") as f:
-            shutil.copyfileobj(srt_file.file, f)
+        with open(summary_path, "wb") as f:
+            shutil.copyfileobj(summary_txt_file.file, f)
         # ------------------------
         with open(user_audio_path, "wb") as f:
             shutil.copyfileobj(user_audio.file, f)
@@ -85,7 +85,7 @@ async def start_analysis(
         background_tasks.add_task(
             pipeline.execute_analysis_pipeline, 
             job_id, 
-            srt_path,  # <--- 传递 srt 文件路径
+            summary_path,  # <--- 传递 txt 文件路径
             user_audio_path,
             JOB_RESULTS_DB
         )

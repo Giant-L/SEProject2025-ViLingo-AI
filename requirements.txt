@@ -1,6 +1,6 @@
 # requirements.txt
 #
-# 生产环境依赖 (用于Docker镜像)
+# 生产环境依赖 (已移除 transformers, bitsandbytes, accelerate)
 # ----------------------------------------------------
 
 # Web 服务框架
@@ -9,10 +9,10 @@ uvicorn[standard]
 python-multipart
 
 # AI 模型推理核心库
-# 注意：torch版本应与生产服务器的CUDA版本匹配
+# torch的cu121版本适用于NVIDIA CUDA 12.1环境
 torch --extra-index-url https://download.pytorch.org/whl/cu121
-transformers
 openai-whisper
 sentence-transformers
-accelerate
-bitsandbytes
+
+# 新增：语法检查工具
+language-tool-python

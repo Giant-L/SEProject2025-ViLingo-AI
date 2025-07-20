@@ -1,119 +1,138 @@
-# src/vilingo/core/pipeline.py (集成语言检测的最终版)
+# src/vilingo/core/pipeline.py (重构最终版)
 
 import torch
 import os
 import shutil
 from .models import MODEL_REGISTRY
+import language_tool_python
 
-# --- 【修改】概括任务的指令模板，改为英文，以支持英文对英文的对比 ---
-SUMMARIZATION_PROMPT_TEMPLATE = """You are an expert content analyst, skilled at distilling the core points and logical framework from complex texts. Please summarize the following text into a coherent and fluid summary of no more than 200 words.
+# --- 新增：初始化语法检查工具 (在容器启动时加载一次) ---
+lang_tool = language_tool_python.LanguageTool('en-US')
 
-The text is as follows:
----
-{text}
----
+# --- 权重配置 ---
+WEIGHT_CONTENT = 0.5
+WEIGHT_FLUENCY = 0.2
+WEIGHT_GRAMMAR = 0.3
 
-Your summary:"""
+# --- 新增：流畅度评分函数 ---
+def _calculate_fluency_score(transcription_result: dict) -> float:
+    """基于Whisper的词时间戳计算流畅度得分"""
+    words = []
+    for segment in transcription_result.get('segments', []):
+        words.extend(segment.get('words', []))
 
-def _run_summarization(text: str) -> str:
-    """内部函数：调用LLM执行概括任务"""
-    model = MODEL_REGISTRY['summarizer_model']
-    tokenizer = MODEL_REGISTRY['summarizer_tokenizer']
-    device = model.device
+    if not words:
+        return 0.0
 
-    # 使用英文Prompt
-    prompt = SUMMARIZATION_PROMPT_TEMPLATE.format(text=text)
+    total_duration = words[-1]['end'] - words[0]['start']
+    word_count = len(words)
     
-    model_inputs = tokenizer([prompt], return_tensors="pt").to(device)
+    # 1. 语速 (Words Per Minute)
+    wpm = (word_count / total_duration) * 60 if total_duration > 0 else 0
+    # 理想区间 120-180 WPM, 在此区间内得分高
+    if 120 <= wpm <= 180:
+        pace_score = 100.0
+    elif wpm < 120:
+        pace_score = max(0, (wpm / 120) * 100)
+    else:
+        pace_score = max(0, (180 / wpm) * 100)
+
+    # 2. 停顿 (Pauses) - 简单版：计算长停顿次数
+    long_pauses = 0
+    for i in range(word_count - 1):
+        pause_duration = words[i+1]['start'] - words[i]['end']
+        if pause_duration > 1.0: # 超过1秒算长停顿
+            long_pauses += 1
     
-    generated_ids = model.generate(
-        model_inputs.input_ids,
-        max_new_tokens=512
-    )
+    # 每分钟长停顿次数越多，得分越低
+    pauses_per_minute = (long_pauses / total_duration) * 60 if total_duration > 0 else 0
+    pause_score = max(0, 100 - (pauses_per_minute * 20)) # 每分钟5次长停顿扣完
+
+    return (pace_score * 0.6) + (pause_score * 0.4) # 语速权重60%，停顿40%
+
+# --- 新增：语法评分函数 ---
+def _calculate_grammar_score(text: str) -> float:
+    """使用 language-tool-python 检查语法错误并评分"""
+    matches = lang_tool.check(text)
+    error_count = len(matches)
+    word_count = len(text.split())
+
+    if word_count == 0:
+        return 0.0
+
+    # 计算每百词错误率
+    errors_per_100_words = (error_count / word_count) * 100
     
-    response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-    summary = response[len(prompt):].strip()
-    return summary
+    # 错误率越高，分数越低。每百词5个错误扣完。
+    score = max(0, 100 - (errors_per_100_words * 20))
+    return score
 
-def _parse_srt_to_text(srt_content: str) -> str:
-    """
-    从SRT文件内容中提取所有对话文本，并合并成一个字符串。
-    """
-    lines = srt_content.strip().split('\n')
-    text_lines = []
-    for line in lines:
-        if line.strip() and not line.strip().isdigit() and '-->' not in line:
-            text_lines.append(line.strip())
-    return ' '.join(text_lines)
+# --- 内容评分函数 (从主函数中提取) ---
+def _calculate_semantic_score(text1: str, text2: str) -> float:
+    """计算两个文本的语义相似度得分"""
+    st_model = MODEL_REGISTRY['sentence_transformer']
+    from sentence_transformers.util import cos_sim
+    
+    embedding1 = st_model.encode(text1, convert_to_tensor=True)
+    embedding2 = st_model.encode(text2, convert_to_tensor=True)
+    
+    similarity = cos_sim(embedding1, embedding2)
+    score = round(float(similarity[0][0]) * 100, 2)
+    return score
 
 
-def execute_analysis_pipeline(job_id: str, srt_path: str, user_audio_path: str, results_db: dict):
+def execute_analysis_pipeline(job_id: str, summary_path: str, user_audio_path: str, results_db: dict):
     """
-    这是在后台任务中执行的核心函数。
-    集成了用户录音的语言检测功能。
+    执行完整的多维度分析流水线
     """
-    temp_dir = os.path.dirname(srt_path)
+    temp_dir = os.path.dirname(summary_path)
     
     try:
-        # --- 初始化模型 ---
         whisper_model = MODEL_REGISTRY['whisper']
-        st_model = MODEL_REGISTRY['sentence_transformer']
         use_fp16 = torch.cuda.is_available()
 
-        # --- 阶段一: 字幕概括 ---
-        results_db[job_id] = {"status": "processing", "stage": "Parsing and summarizing subtitle..."}
-        with open(srt_path, 'r', encoding='utf-8') as f:
-            srt_content = f.read()
-        video_transcript = _parse_srt_to_text(srt_content)
-        if not video_transcript:
-            raise ValueError("字幕文件中未能解析出任何文本内容。")
-        # 使用新的英文Prompt生成英文摘要
-        video_summary = _run_summarization(video_transcript)
+        # --- 阶段一: 读取输入摘要 ---
+        results_db[job_id] = {"status": "processing", "stage": "Reading summary text..."}
+        with open(summary_path, 'r', encoding='utf-8') as f:
+            video_summary = f.read()
+        if not video_summary:
+            raise ValueError("摘要文本文件内容为空。")
 
         # --- 阶段二: 用户录音处理与语言检测 ---
         results_db[job_id] = {"status": "processing", "stage": "Transcribing and detecting language..."}
-        
-        # --- 【修改】获取完整的转录结果，而不仅仅是文本 ---
-        user_transcription_result = whisper_model.transcribe(user_audio_path, fp16=use_fp16)
-        
-        user_transcript = user_transcription_result["text"]
+        user_transcription_result = whisper_model.transcribe(user_audio_path, fp16=use_fp16, word_timestamps=True)
         detected_language = user_transcription_result["language"]
-
         print(f"任务 {job_id}: 检测到用户语言为 '{detected_language}'")
 
-        # --- 【新增】语言检测关卡 ---
         if detected_language != 'en':
-            # 如果语言不是英文，构造一个特定的低分结果并立即完成任务
-            error_result = {
-                "score": 0, # 直接给0分
-                "video_summary": video_summary,
-                "user_transcript": user_transcript, # 仍然返回识别出的非英文内容
-                "original_srt_text": video_transcript,
-                "feedback": "未能检测到有效的英文复述，请使用英文进行表达。 (Invalid language detected. Please use English for your retelling.)"
-            }
-            results_db[job_id] = {"status": "completed", "result": error_result}
-            print(f"任务 {job_id} 因语言不符而提前终止。")
-            return # 使用 return 提前结束函数，不再执行后续步骤
+            raise ValueError(f"语言错误：需要英文复述，但检测到 {detected_language}。")
         
+        user_transcript = user_transcription_result["text"]
         if not user_transcript:
             raise ValueError("用户录音中未能识别出任何语音内容。")
+            
+        # --- 阶段三: 三个维度并行计算 ---
+        results_db[job_id] = {"status": "processing", "stage": "Calculating scores..."}
+        
+        score_content = _calculate_semantic_score(video_summary, user_transcript)
+        score_fluency = _calculate_fluency_score(user_transcription_result)
+        score_grammar = _calculate_grammar_score(user_transcript)
 
-        # --- 阶段三: 内容比对与评分 (只有语言为英文时才会执行) ---
-        results_db[job_id] = {"status": "processing", "stage": "Comparing texts and scoring..."}
-        from sentence_transformers.util import cos_sim
-        embedding_summary = st_model.encode(video_summary, convert_to_tensor=True)
-        embedding_user = st_model.encode(user_transcript, convert_to_tensor=True)
+        # --- 计算加权总分 ---
+        overall_score = (score_content * WEIGHT_CONTENT) + \
+                        (score_fluency * WEIGHT_FLUENCY) + \
+                        (score_grammar * WEIGHT_GRAMMAR)
         
-        similarity = cos_sim(embedding_summary, embedding_user)
-        score = round(float(similarity[0][0]) * 100, 2)
-        
-        # 为成功的结果也增加 feedback 字段，保持格式统一
+        # --- 组装最终结果 ---
         final_result = {
-            "score": score,
-            "video_summary": video_summary,
+            "overall_score": round(overall_score, 2),
+            "score_breakdown": {
+                "content_similarity": round(score_content, 2),
+                "fluency": round(score_fluency, 2),
+                "grammar_accuracy": round(score_grammar, 2)
+            },
+            "original_summary": video_summary,
             "user_transcript": user_transcript,
-            "original_srt_text": video_transcript,
-            "feedback": "评分成功！ (Scoring successful!)"
         }
         
         results_db[job_id] = {"status": "completed", "result": final_result}
