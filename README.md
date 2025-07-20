@@ -202,3 +202,10 @@ whisper会把权重缓存在`~/.cache/whisper/`（或类似目录）下，之后
   * 第二步： 计算向量相似度
 
     这里通过我们部署的第二个ai模型`all-MiniLM-L6-v2 句向量对比ai` 可以高精度分析录音的文本
+
+
+
+启动docker
+docker run --rm -it --gpus all -p 8000:8000 vilingo-service:1.0
+
+跑测试文件

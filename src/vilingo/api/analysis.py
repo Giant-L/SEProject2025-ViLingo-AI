@@ -1,47 +1,78 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+# src/vilingo/api/analysis.py
+
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, status
+from pydantic import BaseModel
 import shutil
 import os
 import uuid
-from ..core import pipeline
 
-# 创建一个API路由器
+# 从我们项目内部的其他模块导入所需组件
+from ..core import pipeline
+from ..core.state import JOB_RESULTS_DB
+
+# --- API响应模型，用于定义数据结构 ---
+class JobResponse(BaseModel):
+    job_id: str
+    message: str
+
+class StatusResponse(BaseModel):
+    status: str
+    stage: str | None = None
+    error: str | None = None
+    result: dict | None = None
+
+# 创建一个API路由器，所有与分析相关的接口都定义在这里
 router = APIRouter()
 
-@router.post("/analyze")
-async def analyze_content(
-    video_file: UploadFile = File(..., description="用户上传的视频文件"),
+# --- 接口一：启动分析任务 ---
+@router.post("/analyze", response_model=JobResponse, status_code=status.HTTP_202_ACCEPTED)
+def start_analysis(
+    background_tasks: BackgroundTasks,
+    summary_txt_file: UploadFile = File(..., description="包含英文内容摘要的文本文件 (.txt)"),
     user_audio: UploadFile = File(..., description="用户的录音文件")
 ):
     """
-    接收视频和音频文件，执行完整的AI分析流程，并返回结果。
+    接收摘要文本和音频文件，启动一个后台分析任务。
     """
-    # 创建唯一的临时工作目录
-    request_id = str(uuid.uuid4())
-    temp_dir = f"temp_{request_id}"
+    job_id = str(uuid.uuid4())
+    temp_dir = f"temp_{job_id}"
     os.makedirs(temp_dir, exist_ok=True)
     
     try:
-        video_path = os.path.join(temp_dir, "source_video")
-        user_audio_path = os.path.join(temp_dir, "user_audio")
+        summary_path = os.path.join(temp_dir, "summary.txt")
+        user_audio_path = os.path.join(temp_dir, "user_audio.mp3")
 
-        # 保存上传的文件到临时目录
-        with open(video_path, "wb") as f:
-            shutil.copyfileobj(video_file.file, f)
+        with open(summary_path, "wb") as f:
+            shutil.copyfileobj(summary_txt_file.file, f)
         with open(user_audio_path, "wb") as f:
             shutil.copyfileobj(user_audio.file, f)
+            
+        JOB_RESULTS_DB[job_id] = {"status": "processing", "stage": "Initializing..."}
         
-        # 调用核心流水线处理
-        result = pipeline.run_analysis_pipeline(video_path, user_audio_path)
-        return result
+        background_tasks.add_task(
+            pipeline.execute_analysis_pipeline, 
+            job_id, 
+            summary_path,
+            user_audio_path,
+            JOB_RESULTS_DB
+        )
+        
+        return {"job_id": job_id, "message": "Analysis task has been accepted and is running in the background."}
 
-    except ValueError as e:
-        # 捕获流水线中可预见的错误 (例如，音频为空)
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # 捕获其他意外错误
-        print(f"处理请求 {request_id} 时发生意外错误: {e}")
-        raise HTTPException(status_code=500, detail="服务器内部发生未知错误。")
-    finally:
-        # 无论成功或失败，都清理临时文件
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
+        raise HTTPException(status_code=500, detail=f"Failed to start job: {e}")
+
+# --- 接口二：查询任务结果 ---
+@router.get("/results/{job_id}", response_model=StatusResponse)
+def get_analysis_result(job_id: str):
+    """
+    根据任务ID查询分析结果。
+    """
+    result = JOB_RESULTS_DB.get(job_id)
+    
+    if not result:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job ID not found.")
+        
+    return result
